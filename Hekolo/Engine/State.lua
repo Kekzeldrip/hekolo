@@ -81,8 +81,8 @@ end
 function State:UpdateGCD()
     local spellCDInfo = C_Spell.GetSpellCooldown(Hekolo.GCD_SPELL_ID)
     if spellCDInfo and spellCDInfo.startTime and spellCDInfo.duration then
-        local startTime = spellCDInfo.startTime
-        local duration = spellCDInfo.duration
+        local startTime = tonumber(spellCDInfo.startTime) or 0
+        local duration = tonumber(spellCDInfo.duration) or 0
         if startTime > 0 and duration > 0 then
             local remaining = (startTime + duration) - GetTime()
             self.gcd_remains = math.max(0, remaining)
@@ -298,8 +298,8 @@ function State:UpdateSpellCooldown(spellName, spellID)
     local duration = 0
 
     if cdInfo then
-        local startTime = cdInfo.startTime or 0
-        local cdDuration = cdInfo.duration or 0
+        local startTime = tonumber(cdInfo.startTime) or 0
+        local cdDuration = tonumber(cdInfo.duration) or 0
         if startTime > 0 and cdDuration > 0 then
             remains = math.max(0, (startTime + cdDuration) - GetTime())
         end
@@ -307,10 +307,12 @@ function State:UpdateSpellCooldown(spellName, spellID)
     end
 
     if chargeInfo then
-        charges = chargeInfo.currentCharges or 1
-        maxCharges = chargeInfo.maxCharges or 1
+        charges = tonumber(chargeInfo.currentCharges) or 1
+        maxCharges = tonumber(chargeInfo.maxCharges) or 1
         if charges < maxCharges and chargeInfo.cooldownStartTime then
-            local chargeRemains = math.max(0, (chargeInfo.cooldownStartTime + (chargeInfo.cooldownDuration or 0)) - GetTime())
+            local cooldownStart = tonumber(chargeInfo.cooldownStartTime) or 0
+            local cooldownDur = tonumber(chargeInfo.cooldownDuration) or 0
+            local chargeRemains = math.max(0, (cooldownStart + cooldownDur) - GetTime())
             -- If we have charges, the ability is usable even if a charge is recharging
             if charges > 0 then
                 remains = 0
@@ -318,7 +320,7 @@ function State:UpdateSpellCooldown(spellName, spellID)
                 remains = chargeRemains
             end
         end
-        duration = chargeInfo.cooldownDuration or duration
+        duration = tonumber(chargeInfo.cooldownDuration) or duration
     end
 
     -- Check if this is just the GCD (not a real cooldown)
