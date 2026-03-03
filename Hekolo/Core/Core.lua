@@ -111,6 +111,7 @@ function Hekolo:UpdateSpec()
     self:ScheduleSpecRetry()
 end
 
+-- Schedule a delayed retry of spec detection when initial attempts fail.
 function Hekolo:ScheduleSpecRetry()
     if self._specRetryTimer then return end -- already scheduled
     if not C_Timer or not C_Timer.After then return end
