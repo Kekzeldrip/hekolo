@@ -1,0 +1,30 @@
+## Interface: 120001
+## Title: Hekolo
+## Notes: Rotation helper based on SimulationCraft APLs for WoW 12.0 (Midnight). Built from scratch for the new restricted API.
+## Author: Hekolo Contributors
+## Version: 1.0.0
+## SavedVariables: HekoloDB
+## IconTexture: Interface\Icons\Spell_Nature_Bloodlust
+
+# Core
+Core/Core.lua
+Core/Events.lua
+Core/Config.lua
+
+# Data
+Data/SpellData.lua
+
+# Engine
+Engine/State.lua
+Engine/Conditions.lua
+Engine/APLParser.lua
+Engine/APLEngine.lua
+
+# Spec APLs
+Specs/Warrior_Arms.lua
+Specs/Warrior_Fury.lua
+Specs/DemonHunter_Havoc.lua
+
+# UI
+UI/Display.lua
+UI/Options.lua
