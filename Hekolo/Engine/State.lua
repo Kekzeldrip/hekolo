@@ -216,7 +216,7 @@ function State:ScanAuras(unit, filter, dest)
         local name = auraData.name
         local spellId = auraData.spellId
         if name then
-            local lowerName = name:lower():gsub("%s+", "_"):gsub("[^%w_]", "")
+            local lowerName = string.gsub(string.gsub(string.lower(name), "%s+", "_"), "[^%w_]", "")
             local remaining = 0
             if auraData.expirationTime and auraData.expirationTime > 0 then
                 remaining = math.max(0, auraData.expirationTime - GetTime())
@@ -250,7 +250,7 @@ function State:ScanAurasLegacy(unit, filter, dest)
         local name, icon, count, _, duration, expirationTime, _, _, _, spellId = func(unit, i, filter)
         if not name then break end
 
-        local lowerName = name:lower():gsub("%s+", "_"):gsub("[^%w_]", "")
+        local lowerName = string.gsub(string.gsub(string.lower(name), "%s+", "_"), "[^%w_]", "")
         local remaining = 0
         if expirationTime and expirationTime > 0 then
             remaining = math.max(0, expirationTime - GetTime())
