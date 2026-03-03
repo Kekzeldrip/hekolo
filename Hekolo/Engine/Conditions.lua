@@ -80,7 +80,7 @@ function Conditions:Tokenize(expr)
             table.insert(tokens, { type = "op", value = "/" })
             i = i + 1
         elseif ch == "%" then
-            -- SimC uses % as division (not modulo)
+            -- SimC uses % for division (not modulo); map to /
             table.insert(tokens, { type = "op", value = "/" })
             i = i + 1
         elseif ch == "(" then

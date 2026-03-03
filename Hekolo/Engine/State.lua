@@ -368,7 +368,7 @@ function State:GetDebuff(name)
 end
 
 function State:GetCooldown(spellName)
-    return self.cooldowns[spellName] or { remains = 0, charges = 0, max_charges = 0, duration = 0, ready = false }
+    return self.cooldowns[spellName] or { remains = 0, charges = 1, max_charges = 1, duration = 0, ready = true }
 end
 
 function State:IsSpellReady(spellName)

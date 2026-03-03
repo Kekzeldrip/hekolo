@@ -26,7 +26,7 @@ function Display:Init()
     local scale = Hekolo:GetSetting("scale")
 
     -- Main container frame
-    mainFrame = CreateFrame("Frame", "HekoloDisplayFrame", UIParent)
+    mainFrame = CreateFrame("Frame", "HekoloDisplayFrame", UIParent, "BackdropTemplate")
     mainFrame:SetSize(
         (iconSize * iconCount) + (iconSpacing * (iconCount - 1)) + 8,
         iconSize + 8
@@ -41,15 +41,17 @@ function Display:Init()
         mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, -200)
     end
 
-    -- Background
-    mainFrame:SetBackdrop({
-        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 8,
-        insets = { left = 2, right = 2, top = 2, bottom = 2 },
-    })
-    mainFrame:SetBackdropColor(0, 0, 0, 0.6)
-    mainFrame:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
+    -- Background (BackdropTemplate is required in modern WoW)
+    if mainFrame.SetBackdrop then
+        mainFrame:SetBackdrop({
+            bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            edgeSize = 8,
+            insets = { left = 2, right = 2, top = 2, bottom = 2 },
+        })
+        mainFrame:SetBackdropColor(0, 0, 0, 0.6)
+        mainFrame:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
+    end
 
     -- Make movable when unlocked
     mainFrame:SetMovable(true)

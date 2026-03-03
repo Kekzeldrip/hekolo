@@ -68,7 +68,7 @@ Hekolo.SpecPower = {
 
     -- Shaman
     [262] = Hekolo.PowerType.Maelstrom, -- Elemental
-    [263] = Hekolo.PowerType.Mana,      -- Enhancement
+    [263] = Hekolo.PowerType.Maelstrom,  -- Enhancement
     [264] = Hekolo.PowerType.Mana,      -- Restoration
 
     -- Mage

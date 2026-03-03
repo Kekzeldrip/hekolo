@@ -105,7 +105,9 @@ function Hekolo:RegisterAPL(specID, name, aplString)
             actions = parsed,
             raw = aplString,
         }
-        self:Debug("Registered APL '" .. (name or "unnamed") .. "' for spec " .. specID .. " (" .. #parsed .. " action lists)")
+        local listCount = 0
+        for _ in pairs(parsed) do listCount = listCount + 1 end
+        self:Debug("Registered APL '" .. (name or "unnamed") .. "' for spec " .. specID .. " (" .. listCount .. " action lists)")
     else
         self:Error("Failed to parse APL for spec " .. specID)
     end
