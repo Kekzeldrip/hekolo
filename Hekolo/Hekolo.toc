@@ -24,6 +24,7 @@ Engine/APLEngine.lua
 Specs/Warrior_Arms.lua
 Specs/Warrior_Fury.lua
 Specs/DemonHunter_Havoc.lua
+Specs/Shaman_Enhancement.lua
 
 # UI
 UI/Display.lua

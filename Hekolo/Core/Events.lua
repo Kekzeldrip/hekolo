@@ -30,6 +30,9 @@ local function OnEvent(self, event, ...)
             self:UnregisterEvent("ADDON_LOADED")
         end
 
+    elseif event == "PLAYER_LOGIN" then
+        Hekolo:UpdateSpec()
+
     elseif event == "PLAYER_ENTERING_WORLD" then
         Hekolo:UpdateSpec()
 
@@ -104,6 +107,7 @@ EventFrame:SetScript("OnEvent", OnEvent)
 EventFrame:SetScript("OnUpdate", OnUpdate)
 
 EventFrame:RegisterEvent("ADDON_LOADED")
+EventFrame:RegisterEvent("PLAYER_LOGIN")
 EventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 EventFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
 EventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")

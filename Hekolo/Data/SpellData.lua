@@ -188,6 +188,35 @@ Hekolo.SpellData[577] = { -- Havoc Demon Hunter
 }
 
 ------------------------------------------------------------------------
+-- Shaman - Enhancement spell IDs
+------------------------------------------------------------------------
+
+Hekolo.SpellData[263] = { -- Enhancement Shaman
+    stormstrike         = 17364,
+    windstrike          = 115356,
+    lava_lash           = 60103,
+    crash_lightning     = 187874,
+    chain_lightning     = 188443,
+    lightning_bolt      = 188196,
+    flame_shock         = 188389,
+    frost_shock         = 196840,
+    sundering           = 197214,
+    doom_winds          = 384352,
+    ascendance          = 114051,
+    feral_spirit        = 51533,
+    windfury_weapon     = 33757,
+    flametongue_weapon  = 318038,
+    lightning_shield    = 192106,
+    tempest             = 454009,
+    voltaic_blaze       = 470057,
+    surging_totem       = 444995,
+    primordial_storm    = 375982,
+    fire_nova           = 333974,
+    elemental_blast     = 117014,
+    ice_strike          = 342240,
+}
+
+------------------------------------------------------------------------
 -- Buff/Debuff spell IDs used in conditions
 ------------------------------------------------------------------------
 
@@ -220,4 +249,19 @@ Hekolo.AuraData = {
     immolation_aura_buff = 258920,
     unbound_chaos       = 347462,
     furious_gaze        = 343312,
+
+    -- Shaman Enhancement
+    maelstrom_weapon     = 344179,
+    doom_winds_buff      = 384352,
+    ascendance_buff      = 114051,
+    hot_hand             = 215785,
+    crash_lightning_buff = 187878,
+    converging_storms    = 198300,
+    lashing_flames       = 390491,
+    flame_shock_dot      = 188389,
+    whirling_fire        = 444995,
+    whirling_air         = 444995,
+    whirling_earth       = 444995,
+    primordial_storm_buff = 375982,
+    lightning_shield_buff = 192106,
 }
