@@ -81,11 +81,48 @@ end
 
 function Hekolo:UpdateSpec()
     local specIndex = GetSpecialization()
-    if specIndex then
-        local specID, specName = GetSpecializationInfo(specIndex)
+    if not specIndex or specIndex <= 0 then
+        self:ScheduleSpecRetry()
+        return
+    end
+
+    -- Primary method: GetSpecializationInfo
+    local specID, specName = GetSpecializationInfo(specIndex)
+    if specID and specID > 0 and specName then
         self.playerSpecID = specID
         self.playerSpec = specName
+        return
     end
+
+    -- Fallback: GetSpecializationInfoForClassID (requires classID)
+    if GetSpecializationInfoForClassID then
+        local _, _, classID = UnitClass("player")
+        if classID then
+            specID, specName = GetSpecializationInfoForClassID(classID, specIndex)
+            if specID and specID > 0 and specName then
+                self.playerSpecID = specID
+                self.playerSpec = specName
+                return
+            end
+        end
+    end
+
+    -- If still no valid spec, schedule a retry
+    self:ScheduleSpecRetry()
+end
+
+function Hekolo:ScheduleSpecRetry()
+    if self._specRetryTimer then return end -- already scheduled
+    if not C_Timer or not C_Timer.After then return end
+
+    self._specRetryTimer = true
+    C_Timer.After(1.0, function()
+        self._specRetryTimer = nil
+        self:UpdateSpec()
+        if self.playerSpecID and self.playerSpecID > 0 then
+            self:Debug("Spec detected (retry): " .. tostring(self.playerSpec) .. " (ID: " .. tostring(self.playerSpecID) .. ")")
+        end
+    end)
 end
 
 ------------------------------------------------------------------------
