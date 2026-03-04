@@ -130,16 +130,17 @@ end
 local function HookCDMViewers()
     if cdmHooked then return end
 
-    local viewers = {
+    local viewers = {}
+    local candidateViewers = {
         EssentialCooldownViewer,
         BuffIconCooldownViewer,
         BuffBarCooldownViewer,
         UtilityCooldownViewer,
     }
 
-    for i = #viewers, 1, -1 do
-        if not viewers[i] then
-            table.remove(viewers, i)
+    for _, viewer in ipairs(candidateViewers) do
+        if viewer then
+            viewers[#viewers + 1] = viewer
         end
     end
 

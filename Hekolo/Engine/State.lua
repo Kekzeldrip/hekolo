@@ -213,7 +213,6 @@ function State:UpdateAuras()
         local playerBuffs = tracker:GetPlayerBuffs()
         if playerBuffs then
             for key, entry in pairs(playerBuffs) do
-                -- Recalculate remaining time from cached data
                 if type(entry) == "table" and entry.up then
                     self.buffs[key] = entry
                 end

@@ -174,4 +174,4 @@ EventFrame:RegisterEvent("UNIT_POWER_FREQUENT")
 EventFrame:RegisterEvent("UNIT_AURA")           -- incremental aura updates
 EventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN") -- cooldown cache invalidation
 EventFrame:RegisterEvent("SPELL_UPDATE_CHARGES")  -- charge cache invalidation
-EventFrame:RegisterEvent("SPELLS_CHANGED")        -- full reset on spell changes
+EventFrame:RegisterEvent("SPELLS_CHANGED")        -- cache invalidation on spell changes
