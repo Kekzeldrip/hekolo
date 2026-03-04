@@ -8,6 +8,12 @@
 --   - C_Spell.GetSpellCooldown works only for whitelisted spells
 --   - C_UnitAuras.GetAuraDataByIndex replaces the old UnitAura/UnitBuff
 --   - Many combat log events are restricted
+--
+-- Aura and cooldown data is now managed by dedicated trackers:
+--   - AuraTracker: event-driven aura cache with CDM hooks for
+--     accurate combat data (inspired by TellMeWhen)
+--   - CooldownTracker: event-driven cooldown cache with
+--     SPELL_UPDATE_COOLDOWN/CHARGES invalidation
 ------------------------------------------------------------------------
 
 local addonName, Hekolo = ...
@@ -185,95 +191,127 @@ function State:UpdateTarget()
 end
 
 ------------------------------------------------------------------------
--- Aura tracking via C_UnitAuras (12.0 compatible)
+-- Aura tracking via AuraTracker (event-driven with CDM hooks)
+--
+-- The AuraTracker maintains an event-driven cache that is updated
+-- incrementally via UNIT_AURA events. It hooks Blizzard's Cooldown
+-- Data Manager frames to recover spell identity for secret auras
+-- in combat (inspired by TellMeWhen's approach).
 ------------------------------------------------------------------------
 
 function State:UpdateAuras()
     wipe(self.buffs)
     wipe(self.debuffs)
 
-    -- Scan player buffs
-    self:ScanAuras("player", "HELPFUL", self.buffs)
+    local tracker = Hekolo.AuraTracker
 
-    -- Scan target debuffs (from player)
-    if self.target_exists then
-        self:ScanAuras("target", "HARMFUL|PLAYER", self.debuffs)
+    if tracker then
+        -- Check for secret state transitions
+        tracker:CheckSecrets()
+
+        -- Copy cached player buffs into state
+        local playerBuffs = tracker:GetPlayerBuffs()
+        if playerBuffs then
+            for key, entry in pairs(playerBuffs) do
+                if type(entry) == "table" and entry.up then
+                    self.buffs[key] = entry
+                end
+            end
+        end
+
+        -- Copy cached target debuffs into state
+        if self.target_exists then
+            local targetDebuffs = tracker:GetTargetDebuffs()
+            if targetDebuffs then
+                for key, entry in pairs(targetDebuffs) do
+                    if type(entry) == "table" and entry.up then
+                        self.debuffs[key] = entry
+                    end
+                end
+            end
+        end
+    else
+        -- Fallback: direct scan if AuraTracker not available
+        self:ScanAurasDirect("player", "HELPFUL", self.buffs)
+        if self.target_exists then
+            self:ScanAurasDirect("target", "HARMFUL|PLAYER", self.debuffs)
+        end
     end
 end
 
-function State:ScanAuras(unit, filter, dest)
-    if not C_UnitAuras or not C_UnitAuras.GetAuraDataByIndex then
-        -- Fallback for environments without the new API
-        self:ScanAurasLegacy(unit, filter, dest)
-        return
-    end
+-- Direct scan fallback (used when AuraTracker is not initialized)
+function State:ScanAurasDirect(unit, filter, dest)
+    if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+        local i = 1
+        while true do
+            local auraData = C_UnitAuras.GetAuraDataByIndex(unit, i, filter)
+            if not auraData then break end
 
-    local i = 1
-    while true do
-        local auraData = C_UnitAuras.GetAuraDataByIndex(unit, i, filter)
-        if not auraData then break end
+            local name = auraData.name
+            local spellId = auraData.spellId
+            if name then
+                local lowerName = name:lower():gsub("%s+", "_"):gsub("[^%w_]", "")
+                local remaining = 0
+                if auraData.expirationTime and auraData.expirationTime > 0 then
+                    remaining = math.max(0, auraData.expirationTime - GetTime())
+                end
 
-        local name = auraData.name
-        local spellId = auraData.spellId
-        if name then
+                local entry = {
+                    up = true,
+                    remains = remaining,
+                    stacks = auraData.applications or 1,
+                    duration = auraData.duration or 0,
+                    spellId = spellId,
+                }
+
+                dest[lowerName] = entry
+                if spellId then
+                    dest[spellId] = entry
+                end
+            end
+            i = i + 1
+        end
+    elseif UnitBuff or UnitDebuff then
+        -- Legacy fallback using UnitBuff/UnitDebuff if available
+        local func = filter:find("HELPFUL") and UnitBuff or UnitDebuff
+        if not func then return end
+
+        local i = 1
+        while true do
+            local name, icon, count, _, duration, expirationTime, _, _, _, spellId = func(unit, i, filter)
+            if not name then break end
+
             local lowerName = name:lower():gsub("%s+", "_"):gsub("[^%w_]", "")
             local remaining = 0
-            if auraData.expirationTime and auraData.expirationTime > 0 then
-                remaining = math.max(0, auraData.expirationTime - GetTime())
+            if expirationTime and expirationTime > 0 then
+                remaining = math.max(0, expirationTime - GetTime())
             end
 
             local entry = {
                 up = true,
                 remains = remaining,
-                stacks = auraData.applications or 1,
-                duration = auraData.duration or 0,
+                stacks = count or 1,
+                duration = duration or 0,
                 spellId = spellId,
             }
 
             dest[lowerName] = entry
-            -- Also store by spell ID for reverse lookup
             if spellId then
                 dest[spellId] = entry
             end
+            i = i + 1
         end
-        i = i + 1
-    end
-end
-
-function State:ScanAurasLegacy(unit, filter, dest)
-    -- Legacy fallback using UnitBuff/UnitDebuff if available
-    local func = filter:find("HELPFUL") and UnitBuff or UnitDebuff
-    if not func then return end
-
-    local i = 1
-    while true do
-        local name, icon, count, _, duration, expirationTime, _, _, _, spellId = func(unit, i, filter)
-        if not name then break end
-
-        local lowerName = name:lower():gsub("%s+", "_"):gsub("[^%w_]", "")
-        local remaining = 0
-        if expirationTime and expirationTime > 0 then
-            remaining = math.max(0, expirationTime - GetTime())
-        end
-
-        local entry = {
-            up = true,
-            remains = remaining,
-            stacks = count or 1,
-            duration = duration or 0,
-            spellId = spellId,
-        }
-
-        dest[lowerName] = entry
-        if spellId then
-            dest[spellId] = entry
-        end
-        i = i + 1
     end
 end
 
 ------------------------------------------------------------------------
--- Cooldown tracking
+-- Cooldown tracking via CooldownTracker (event-driven caching)
+--
+-- The CooldownTracker caches C_Spell.GetSpellCooldown and
+-- C_Spell.GetSpellCharges results, invalidating them only on
+-- SPELL_UPDATE_COOLDOWN and SPELL_UPDATE_CHARGES events.
+-- This avoids redundant API calls and mirrors TellMeWhen's
+-- approach for accurate cooldown data in combat.
 ------------------------------------------------------------------------
 
 function State:UpdateCooldowns()
@@ -289,8 +327,17 @@ function State:UpdateCooldowns()
 end
 
 function State:UpdateSpellCooldown(spellName, spellID)
-    local cdInfo = C_Spell.GetSpellCooldown(spellID)
-    local chargeInfo = C_Spell.GetSpellCharges and C_Spell.GetSpellCharges(spellID)
+    local tracker = Hekolo.CooldownTracker
+
+    local cdInfo, chargeInfo
+    if tracker then
+        cdInfo = tracker:GetSpellCooldown(spellID)
+        chargeInfo = tracker:GetSpellCharges(spellID)
+    else
+        -- Fallback: direct API call
+        cdInfo = C_Spell.GetSpellCooldown(spellID)
+        chargeInfo = C_Spell.GetSpellCharges and C_Spell.GetSpellCharges(spellID)
+    end
 
     local remains = 0
     local charges = 1

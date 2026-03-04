@@ -13,8 +13,8 @@ Hekolo is designed around the following 12.0 restrictions:
 | Area | Change | Hekolo Approach |
 |------|--------|-----------------|
 | **Health/Power** | `UnitHealth`/`UnitPower` return "secret" values in combat | Uses `UnitHealthPercent`/`UnitPowerPercent` instead |
-| **Spell Cooldowns** | Only whitelisted spells via `C_Spell.GetSpellCooldown` | Queries available spell CDs; gracefully degrades for secret ones |
-| **Aura Tracking** | `UnitBuff`/`UnitDebuff` removed | Uses `C_UnitAuras.GetAuraDataByIndex` exclusively |
+| **Spell Cooldowns** | Only whitelisted spells via `C_Spell.GetSpellCooldown` | Event-driven caching via `SPELL_UPDATE_COOLDOWN`/`SPELL_UPDATE_CHARGES` (inspired by TellMeWhen) |
+| **Aura Tracking** | `UnitBuff`/`UnitDebuff` removed; aura data may be "secret" in combat | Event-driven via `UNIT_AURA` with CDM hooks to recover secret aura identity (inspired by TellMeWhen) |
 | **Combat Automation** | Strict limits on combat decision logic | Displays visual suggestions only; no macro generation |
 | **GCD Tracking** | GCD spell 61304 remains whitelisted | Uses this for reliable GCD state |
 | **Enemy Info** | Most enemy data is secret | Uses nameplate count for AoE estimation |
@@ -69,6 +69,8 @@ Hekolo/
 ├── Data/
 │   └── SpellData.lua       # Spell IDs, power types, aura data
 ├── Engine/
+│   ├── AuraTracker.lua     # Event-driven aura cache with CDM hooks (TellMeWhen-inspired)
+│   ├── CooldownTracker.lua # Event-driven cooldown cache (TellMeWhen-inspired)
 │   ├── State.lua           # Game state snapshot (12.0-safe APIs)
 │   ├── Conditions.lua      # SimC expression tokenizer, parser, evaluator
 │   ├── APLParser.lua       # SimC APL text parser
@@ -81,7 +83,8 @@ Hekolo/
 │   ├── Warrior_Fury.lua    # Fury Warrior default APL
 │   └── DemonHunter_Havoc.lua  # Havoc DH default APL
 └── Tests/
-    └── test_apl_parser.lua # Standalone Lua tests for parser & conditions
+    ├── test_apl_parser.lua # Standalone Lua tests for parser & conditions
+    └── test_trackers.lua   # Tests for AuraTracker & CooldownTracker
 ```
 
 ## How the Engine Works
@@ -89,9 +92,20 @@ Hekolo/
 1. **State Snapshot** (`Engine/State.lua`): Every 0.1s during combat, captures:
    - GCD state via whitelisted spell 61304
    - Health/power percentages (non-secret)
-   - Active buffs/debuffs via `C_UnitAuras`
-   - Spell cooldowns via `C_Spell.GetSpellCooldown`
+   - Active buffs/debuffs via event-driven `AuraTracker` with CDM hooks
+   - Spell cooldowns via event-driven `CooldownTracker` with cache invalidation
    - Enemy count via nameplate scanning
+
+   **AuraTracker** (`Engine/AuraTracker.lua`): Inspired by TellMeWhen's approach:
+   - Listens to `UNIT_AURA` events for incremental aura updates (added/updated/removed)
+   - Hooks Blizzard's Cooldown Data Manager (CDM) viewer frames to recover spell identity for secret auras in combat
+   - Uses `C_UnitAuras.IsAuraFilteredOutByInstanceID` to determine aura ownership when fields are secret
+   - Handles `C_Secrets.ShouldAurasBeSecret` for 12.0 secret state transitions
+
+   **CooldownTracker** (`Engine/CooldownTracker.lua`): Inspired by TellMeWhen's approach:
+   - Caches `C_Spell.GetSpellCooldown` / `C_Spell.GetSpellCharges` results
+   - Invalidates cache only on `SPELL_UPDATE_COOLDOWN`, `SPELL_UPDATE_CHARGES`, `SPELLS_CHANGED` events
+   - Handles `UNIT_SPELL_HASTE` for haste-affected cooldown durations
 
 2. **APL Parse** (`Engine/APLParser.lua`): Converts SimC APL text into structured action lists:
    - Splits into named action lists (default, cleave, aoe, etc.)
@@ -116,7 +130,8 @@ Hekolo/
 Due to WoW 12.0's "secret values" system and API restrictions:
 
 - **Resource values are approximate**: We use percentage-based APIs, so exact resource thresholds (e.g., "rage >= 85") are estimates based on typical max values
-- **Not all cooldowns trackable**: Only Blizzard-whitelisted spells report cooldown data; others may always appear "ready"
+- **Cooldown data is event-driven**: Uses `SPELL_UPDATE_COOLDOWN` / `SPELL_UPDATE_CHARGES` events with caching for accurate data; spells not reported by these events may still appear "ready"
+- **Aura data uses CDM hooks**: Secret aura identity is recovered via Blizzard's Cooldown Data Manager frames (same technique as TellMeWhen); auras without CDM representation may have limited data in combat
 - **No combat log parsing**: Cannot track damage events, procs from combat log, or enemy abilities
 - **No predictive simulation**: Cannot look ahead multiple GCDs as the original Hekili did
 - **Target time-to-die is estimated**: Based on health percentage heuristic, not damage tracking
